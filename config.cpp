@@ -38,17 +38,17 @@ class CfgMods
 			class gameScriptModule
 			{
 				value = "";
-				files[] = {"LegacyGunplay/3_Game"};
+				files[] = {"LegacyGunplay/Definitions","LegacyGunplay/3_Game"};
 			};
 			class worldScriptModule
 			{
 				value = "";
-				files[] = {"LegacyGunplay/4_World"};
+				files[] = {"LegacyGunplay/Definitions","LegacyGunplay/4_World"};
 			};
 			class missionScriptModule
 			{
 				value = "";
-				files[] = {"LegacyGunplay/5_Mission"};
+				files[] = {"LegacyGunplay/Definitions","LegacyGunplay/5_Mission"};
 			};
 		};
 	};

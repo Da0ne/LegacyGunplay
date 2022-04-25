@@ -8,17 +8,20 @@ class DynamicCrossHair extends CrossHair
 
 	protected float m_RaycastDistance = 50;
 
+	#ifdef LG_DRAW_DEBUG
 	Shape m_Shape_usti;
 	Shape m_Shape_konec;
 	Shape m_BarrelLine;
 	Shape m_AimLine;
 	Shape m_AimPoint;
+	#endif
 
 	void GetPlayer()
 	{
 		Class.CastTo(m_Player, GetGame().GetPlayer());
 	}
 
+	#ifdef LG_DRAW_DEBUG
 	void DrawBarrelMemoryPoints(vector begin_point, vector end_point)
 	{
 		if (m_Shape_usti) Debug.RemoveShape(m_Shape_usti);
@@ -42,6 +45,7 @@ class DynamicCrossHair extends CrossHair
 		if (m_AimPoint) Debug.RemoveShape(m_AimPoint);
 		m_AimPoint = Debug.DrawSphere(position, 0.04, COLOR_RED);
 	}
+	#endif
 
 	bool GetAimPosition(out vector position)
 	{
@@ -54,12 +58,16 @@ class DynamicCrossHair extends CrossHair
 		
 		vector aim_point = usti_pos + vector.Direction(usti_pos, m_Weapon.ModelToWorld(usti_hlavne_position + (vector.Direction(konec_hlavne_position, usti_hlavne_position) * m_RaycastDistance))) * m_RaycastDistance;
 
+		#ifdef LG_DRAW_DEBUG
 		DrawBarrelMemoryPoints(konec_hlavne_position, usti_hlavne_position);
 		DrawBarrelAimLine(aim_point, usti_pos);
+		#endif
 		
 		if (DayZPhysics.RaycastRV(usti_pos, aim_point, position, contact_dir, contact_component, NULL , NULL, m_Player, false, false, ObjIntersectIFire))
 		{
+			#ifdef LG_DRAW_DEBUG
 			DrawAimPoints(usti_pos, position);
+			#endif
 			return true;
 		}
 		return false;

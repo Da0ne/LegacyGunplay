@@ -1,0 +1,1 @@
+#define LG_DRAW_DEBUG
