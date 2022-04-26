@@ -32,16 +32,20 @@ class SwayBaseConstants
 	}
 
 	// This modifier is applied to the base sway before stamina effects
-	float BASE_SWAY_MODIFIER = 0.9;
+	float BASE_SWAY_MODIFIER = 1.3;
+	float BASE_SWAY_MODIFIER_OPTIC = 1.3; //This modifier is BASE_SWAY_MODIFIER - optic.GetZoomMax() dynamically changed when using optics.
 
 	float SWAY_MULTIPLIER_ERECT = 1.0;
 	float SWAY_MULTIPLIER_CROUCHED = 0.75;
 	float SWAY_MULTIPLIER_PRONE = 0.5;
-	float SWAY_MULTIPLIER_STABLE = 0.225; // holding breath
+	float SWAY_MULTIPLIER_STABLE = 0.09; // holding breath
 	float SWAY_MULTIPLIER_EXHAUSTED = 2.0;
 	float SWAY_MULTIPLIER_BIPOD = 0.1;
 
 	float STAMINA_MULTIPLIER_SCALE = 1.5;
+
+	float SWAY_STATE_TRANSITION_TIME_STABLE_IN 	= 1.35; //Time interpolated before hold breath takes effect
+	float SWAY_STATE_TRANSITION_TIME_STABLE_OUT = 0.55; //Time interpolated after hold breath takes effect
 
 	float SWAY_STATE_TRANSITION_TIME_ERECT 		= 0.35;
 	float SWAY_STATE_TRANSITION_TIME_CROUCHED 	= 0.17;
@@ -55,6 +59,7 @@ class SwayBase
 	PlayerBase m_Player;
 	protected bool m_IsClient;
 
+	protected float m_baseSwayOptics;
 	protected float m_StaminaNormalised;
 
 	protected float m_Amplitude;
@@ -99,6 +104,15 @@ class SwayBase
 
 		m_AttachmentsModifier = GetAttachmentsModifier(weapon);
 
+		//Optics FOV sway modifier adjustments
+		ItemOptics optic;
+		if (m_Weapon && Class.CastTo(optic, m_Weapon.GetAttachedOptics()))
+		{
+			float reduction  = Math.Clamp(GetOpticZoomSwayModifier(), 0.0, SwayBaseConstants.instance["BASE_SWAY_MODIFIER_OPTIC"]);
+			m_baseSwayOptics = SwayBaseConstants.instance["BASE_SWAY_MODIFIER_OPTIC"] - reduction;
+			Print(m_baseSwayOptics);
+		}
+
 		m_SwayStateModifier = SwayBaseConstants.instance["SWAY_MULTIPLIER_ERECT"];
 
 		// Randomly init sway time to set a random pos in the sway curve
@@ -113,14 +127,26 @@ class SwayBase
 	{
 		//DbgPrintSwayBase("DbgPrintSwayBase | Player: "+m_Player+" | Update");
 
+		float baseSway_Modifier = SwayBaseConstants.instance["BASE_SWAY_MODIFIER"];
+
+		//Handle base modifier when optics change
+		ItemOptics optic;
+		if (m_Weapon && Class.CastTo(optic, m_Weapon.GetAttachedOptics()))
+		{
+			if (optic.IsInOptics())
+				baseSway_Modifier = m_baseSwayOptics; //use the one for optics
+		}
+
+		//Print(baseSway_Modifier);
+
 		m_StaminaNormalised = GetPlayerStamina();
 		UpdateSwayState(pDt);
 
 		float stamina_modifier = 1 + ((1 - m_StaminaNormalised) * SwayBaseConstants.instance["STAMINA_MULTIPLIER_SCALE"]);
 
 		vector offset = GetSwayOffset(m_ModifiedTime);
-		offset_x = offset[0] * m_AttachmentsModifier * GetBipodModifier() * stamina_modifier * SwayBaseConstants.instance["BASE_SWAY_MODIFIER"];
-		offset_y = offset[1] * m_AttachmentsModifier * GetBipodModifier() * stamina_modifier * SwayBaseConstants.instance["BASE_SWAY_MODIFIER"];
+		offset_x = offset[0] * m_AttachmentsModifier * GetBipodModifier() * stamina_modifier * baseSway_Modifier;
+		offset_y = offset[1] * m_AttachmentsModifier * GetBipodModifier() * stamina_modifier * baseSway_Modifier;
 
 		offset_x *= m_SwayStateModifier;
 		offset_y *= m_SwayStateModifier;
@@ -137,6 +163,44 @@ class SwayBase
 		m_ModifiedTime += pDt * m_SwayStateModifier;
 
 		//DbgPrintSwayBase("-------------------");
+	}
+
+	/*
+	* Calculate a sway modifier based on optic and its zoom properties
+	*/
+	float GetOpticZoomSwayModifier()
+	{
+		float result = SwayBaseConstants.instance["BASE_SWAY_MODIFIER_OPTIC"]; //default
+		ItemOptics optic;
+		if (m_Weapon && Class.CastTo(optic, m_Weapon.GetAttachedOptics()))
+		{
+			string cfgPath = "cfgVehicles " + optic.GetType() + " OpticsInfo opticsZoomMax";
+			if (GetGame().ConfigIsExisting(cfgPath))
+			{
+				//some are defined as floats directly, others are a string tied to a formula
+				switch(GetGame().ConfigGetType(cfgPath))
+				{
+					case CT_FLOAT:
+						result = GetGame().ConfigGetFloat(cfgPath);
+					break;
+
+					case CT_STRING:
+						string cfgStr = string.Empty;
+						GetGame().ConfigGetText(cfgPath, cfgStr);
+						if (cfgStr != string.Empty)
+						{
+							array<string> strs = {};
+							cfgStr.Split("/", strs);
+							if (strs.Count() >= 1)
+							{
+								result = strs[0].ToFloat();
+							}
+						}
+					break;
+				}
+			}
+		}
+		return result;
 	}
 
 	int GetSwayState()
@@ -215,7 +279,10 @@ class SwayBase
 		//DbgPrintSwayBase("m_LastSwayState: "+m_LastSwayState+" | m_SwayState: "+m_SwayState);
 
 		float last_sway_state_transition_time = GetSwayStateTransitionTime(m_LastSwayState);
-		Print(last_sway_state_transition_time);
+
+		//Check if we are kicking into HOLD breath, apply transition time.
+		if (m_SwayState == PlayerSwayStates.STABLE)
+			last_sway_state_transition_time = SwayBaseConstants.instance["SWAY_STATE_TRANSITION_TIME_STABLE_IN"];
 
 		float last_sway_state_modifier = GetSwayStateModifier(m_LastSwayState);
 		float current_sway_state_modifier = GetSwayStateModifier(m_SwayState);
@@ -253,6 +320,8 @@ class SwayBase
 	{
 		switch (state)
 		{
+			case PlayerSwayStates.STABLE:
+				return SwayBaseConstants.instance["SWAY_STATE_TRANSITION_TIME_STABLE_OUT"];
 			case PlayerSwayStates.EXHAUSTED:
 				return SwayBaseConstants.instance["SWAY_STATE_TRANSITION_TIME_EXHAUSTED"];
 			case PlayerSwayStates.CROUCHED:
@@ -309,12 +378,12 @@ class SwayBase
 	*/
 	private float GetX(float time)
 	{
-		return Math.Sin(time * 2.2) * m_Amplitude;
+		return Math.Sin(time * 1.65) * m_Amplitude; //2.2
 	}
 
 	private float GetY(float time)
 	{
-		return Math.Sin(time * 1.65) * m_Amplitude;
+		return Math.Sin(time * 2.2) * m_Amplitude; //1.65
 	}
 
 	float GetBipodModifier()

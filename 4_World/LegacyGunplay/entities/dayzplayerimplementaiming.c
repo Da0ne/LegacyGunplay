@@ -28,6 +28,11 @@ modded class DayZPlayerImplementAiming
 		return m_CurrentSway;
 	}
 
+	InertiaBase GetCurrentInertia()
+	{
+		return m_CurrentInertia;
+	}
+
 	Weapon GetWeaponInHands()
 	{
 		Weapon weapon_in_hands;

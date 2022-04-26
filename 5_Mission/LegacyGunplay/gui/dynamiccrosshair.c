@@ -3,7 +3,6 @@ class DynamicCrossHair extends CrossHair
 	protected vector m_Position;
 	protected bool m_Visible = false;
 
-	protected PlayerBase m_Player = NULL;
 	protected Weapon_Base m_Weapon = NULL;
 
 	protected float m_RaycastDistance = 50;
@@ -15,11 +14,6 @@ class DynamicCrossHair extends CrossHair
 	Shape m_AimLine;
 	Shape m_AimPoint;
 	#endif
-
-	void GetPlayer()
-	{
-		Class.CastTo(m_Player, GetGame().GetPlayer());
-	}
 
 	#ifdef LG_DRAW_DEBUG
 	void DrawBarrelMemoryPoints(vector begin_point, vector end_point)
@@ -63,6 +57,7 @@ class DynamicCrossHair extends CrossHair
 		DrawBarrelAimLine(aim_point, usti_pos);
 		#endif
 		
+		PlayerBase m_Player = PlayerBase.Cast(GetGame().GetPlayer());
 		if (DayZPhysics.RaycastRV(usti_pos, aim_point, position, contact_dir, contact_component, NULL , NULL, m_Player, false, false, ObjIntersectIFire))
 		{
 			#ifdef LG_DRAW_DEBUG
@@ -76,6 +71,11 @@ class DynamicCrossHair extends CrossHair
 	void GetPosition()
 	{
 		m_Visible = false;
+
+		PlayerBase m_Player = PlayerBase.Cast(GetGame().GetPlayer());
+		if(!m_Player)
+			return;
+
 		ItemBase itemInHands = m_Player.GetItemInHands();
 		if (itemInHands && itemInHands.IsWeapon())
 		{
@@ -88,7 +88,9 @@ class DynamicCrossHair extends CrossHair
 
 	void UpdatePosition()
 	{
-		if(!m_Player) GetPlayer();
+		PlayerBase m_Player = PlayerBase.Cast(GetGame().GetPlayer());
+		if(!m_Player)
+			return;
 
 		if (m_Player && m_Player.IsPlayerSelected() && !GetGame().IsInventoryOpen())
 		{
@@ -130,7 +132,7 @@ class DynamicCrossHair extends CrossHair
 			float iconSizeH = screenH * sy;
 
 			screenSpace[0] = screenSpace[0] - (iconSizeW / 2);
-			screenSpace[1] = screenSpace[1] - (iconSizeH / 2);
+			screenSpace[1] = screenSpace[1] - (iconSizeH / 2.5); //divide by 2.5 we want it to stay below the - -
 
 			//DebugPrintDynamicCrossHair("screenSpace: " + screenSpace);
 			//DebugPrintDynamicCrossHair("iconSizeW: " + iconSizeW + ", iconSizeH: " + iconSizeH);

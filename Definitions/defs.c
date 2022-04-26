@@ -1,1 +1,1 @@
-#define LG_DRAW_DEBUG
+//#define LG_DRAW_DEBUG

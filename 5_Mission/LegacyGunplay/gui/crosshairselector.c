@@ -1,8 +1,10 @@
 modded class CrossHairSelector extends ScriptedWidgetEventHandler
 {
 	string m_dynamicCrossHairName = "dynamic_crosshair";
-	
+	string m_statiCrosshairName = "old_crosshair";
+
 	ref DynamicCrossHair dynamicCrossHair;
+	ref StatiCrosshair   statiCrosshair;
 
 	override protected void Init()
 	{
@@ -11,18 +13,22 @@ modded class CrossHairSelector extends ScriptedWidgetEventHandler
 		Widget child = m_Root.GetChildren();
 		while(child)
 		{
-			if (child.GetName() == m_dynamicCrossHairName)
+			string wName = child.GetName();
+			if (wName == m_dynamicCrossHairName)
 			{
 				dynamicCrossHair = new DynamicCrossHair(child);
 			}
-
+			else if (wName == m_statiCrosshairName)
+			{
+				statiCrosshair  = new StatiCrosshair(child);
+			}
 			child = child.GetSibling();
 		}
 	}
 
 	override protected void ShowCrossHair(CrossHair crossHair)
 	{
-		if (crossHair && (crossHair.GetName() == "old_crosshair" || crossHair.GetName() == "dynamic_crosshair"))
+		if (crossHair && (crossHair.GetName() == m_statiCrosshairName || crossHair.GetName() == m_dynamicCrossHairName))
 		{
 			//! we will want to show our dynamic crosshair
 			if (dynamicCrossHair)
@@ -30,6 +36,9 @@ modded class CrossHairSelector extends ScriptedWidgetEventHandler
 				if (!dynamicCrossHair.IsCurrent() && dynamicCrossHair.IsShown())
 				{
 					dynamicCrossHair.Show();
+					//we show the - - with the dynamic one too.
+					if (statiCrosshair)
+						statiCrosshair.Show();
 				}
 
 				//! update our crosshair position
@@ -39,13 +48,14 @@ modded class CrossHairSelector extends ScriptedWidgetEventHandler
 		else
 		{
 			if (dynamicCrossHair) dynamicCrossHair.Hide();
+			if (statiCrosshair) statiCrosshair.Hide();
 		}
 
 		super.ShowCrossHair(crossHair);
 
 		HumanInputController hic = m_Player.GetInputController();
 		// hide static crosshair if in freelook
-		if (GetCurrentCrossHair() && GetCurrentCrossHair().GetName() == "old_crosshair" && hic.CameraIsFreeLook())
+		if (GetCurrentCrossHair() && GetCurrentCrossHair().GetName() == m_statiCrosshairName && hic.CameraIsFreeLook())
 		{
 			GetCurrentCrossHair().Hide();
 		}
@@ -60,7 +70,7 @@ modded class CrossHairSelector extends ScriptedWidgetEventHandler
 		//! firearms
 		if (firearmInHands && m_Player.IsRaised() && !m_Player.IsInIronsights() && !m_Player.IsInOptics() && !m_Player.GetCommand_Melee2())
 		{
-			ShowCrossHair(GetCrossHairByName("dynamic_crosshair"));
+			ShowCrossHair(GetCrossHairByName(m_dynamicCrossHairName));
 		}
 		else
 		{
